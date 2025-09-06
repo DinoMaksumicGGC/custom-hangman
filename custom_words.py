@@ -1,7 +1,7 @@
 import random
 
 answer_directory = {
-'Ella#197171': {'player':'Class', 'theme':'hacking a password', 'hint':'Numbers'}
+'Ella#197171': {'player':'Class', 'theme':'hacking lindas facebook password', 'hint':'Numbers and one special character'},
 
 }
 keys = list(answer_directory.keys())

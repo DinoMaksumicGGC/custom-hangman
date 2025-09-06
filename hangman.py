@@ -3,6 +3,17 @@ from custom_words import shuffled_answers
 title = 'Family Hang(man) Time!'
 prompt = "Guess a letter: "
 
+def mask_word(word: str, guessed_letters: set[str]) -> str:
+    # Reveal non-letters (digits, spaces, punctuation) immediately;
+    # only hide letters until guessed.
+    out = []
+    for ch in word:
+        if ch.isalpha():
+            out.append(ch if ch in guessed_letters else "_")
+        else:
+            out.append(ch)
+    return "".join(ch if ch in guessed_letters else "_" for ch in word)
+
 def answerer():
     answer = shuffled_answers.popitem()
     word = answer[0].upper()
@@ -13,61 +24,65 @@ def answerer():
 
 def play(word, player, theme, hint):
     guessed = False
-    guessed_letters = []
-    guessed_words = []
-    word_completion = ""
+    guessed_letters = set()
+    guessed_words = set()
     tries = 6
-    counter = len(word.split())
-    holder = word.split()
-    while counter > 0:
-        word_completion += "_" * len(holder[0]) + "\n"
-        counter -= 1
-        holder.pop(0)
+
+    word_completion = mask_word(word, guessed_letters)
+
     print(f"\n{title}")
     print(display_hangman(tries))
     print(word_completion)
     print('\n')
     print(player)
+
     while not guessed and tries > 0:
-        guess = input(prompt).upper()
+        guess = input(prompt).upper().strip()
 
-        reguess = f"You already guessed '{guess}', dummy."
-        wrong = f"No! '{guess}' is NOT in the word. Type '?' if you need a hint, but it will cost a limb."
-        right = f"You got lucky...'{guess}' is in the word"
-
-        if len(guess) == 1 and guess.isalpha():
-            if guess in guessed_letters:
-                print(reguess)
-            elif guess not in word:
-                print(wrong)
-                tries -= 1
-                guessed_letters.append(guess)
-            else:
-                print(right)
-                guessed_letters.append(guess)
-                word_as_list = list(word_completion)
-                indices = [i for i, letter in enumerate(word) if letter == guess]
-                for index in indices:
-                    word_as_list[index] = guess
-                word_completion = "".join(word_as_list)
-                if "_" not in word_completion:
-                    guessed = True
-        elif guess == '?':
+        if guess == "?":
             tries -= 1
             print(hint)
-        elif len(guess) == len(word) and guess.isalpha():
-            if guess in guessed_words:
-                print(reguess)
-            if guess != word:
-                print(f"Ha! Nice try, '{guess}' is not the word. Maybe stick with letters, it's easier.")
+        elif len(guess) == 1:
+            # Allow ANY single character (letters, digits, punctuation, space),
+            # except we already handled '?' above.
+            if guess in guessed_letters:
+                print(f"You already guessed '{guess}', dummy.")
             else:
-                guessed = True
-                word_completion = word
+                guessed_letters.add(guess)
+                if guess in word:
+                    print(f"You got lucky...'{guess}' is in the word")
+                else:
+                    print(f"No! '{guess}' is NOT in the word. "
+                          f"Type '?' if you need a hint, but it will cost a limb.")
+                    tries -= 1
+        elif len(guess) == len(word):
+            if guess in guessed_words:
+                print(f"You already guessed '{guess}', dummy.")
+            else:
+                guessed_words.add(guess)
+                if guess == word:
+                    guessed = True
+                    word_completion = word
+                else:
+                    print(f"Ha! Nice try, '{guess}' is not the word. "
+                          "Maybe stick with letters, it's easier.")
+                    tries -= 1
         else:
-            print("\nNot a valid guess. That is so obviously not a valid guess. Please, this is serious.")
+            print("\nNot a valid guess. That is so obviously not a valid guess. "
+                  "Please, this is serious.")
+
+        # Recompute the masked display after each turn
+        if not guessed:
+            word_completion = mask_word(word, guessed_letters)
+
         print(display_hangman(tries))
         print(word_completion)
         print('\n')
+
+        # If all letters are revealed (no underscores left), you win
+        if "_" not in word_completion:
+            guessed = True
+
     if guessed:
         print(f"{player}, you're a winner! The theme is {theme}.")
     else:
@@ -142,6 +157,7 @@ def display_hangman(tries):
                    -
                 """
     ]
+    tries = max(0, min(tries, 6))
     return stages[tries]
 
 def main():
